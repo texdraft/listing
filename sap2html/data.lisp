@@ -37,9 +37,10 @@
   pseudop
   (help nil :type string))
 
-(defstruct line
+(defstruct (line (:print-object))
   assembly
   remarksp
+  generatedp
   flags
   address
   assembled
@@ -51,6 +52,29 @@
   variable-length
   remarks
   sequence)
+
+(defmethod print-object ((object line) stream)
+  (format stream "#<line #~A~%  ~
+                         remarks? ~A~%  ~
+                         generated? ~A~%  ~
+                         flags ~W~%  ~
+                         address ~W~%  ~
+                         location ~W~%  ~
+                         operation ~A~%  ~
+                         variable ~W length ~A~%  ~
+                         remarks ~A~%  ~
+                         sequence ~W>"
+                  (line-number object)
+                  (line-remarksp object)
+                  (line-generatedp object)
+                  (line-flags object)
+                  (line-address object)
+                  (line-location object)
+                  (line-operation object)
+                  (line-variable object)
+                  (line-variable-length object)
+                  (line-remarks object)
+                  (line-sequence object)))
 
 (defstruct token
   type

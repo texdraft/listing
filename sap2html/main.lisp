@@ -145,4 +145,3 @@
 (defun do-texdraft ()
   (do-fortran (uiop:native-namestring "~/texdraft.github.io/fortran/"))
   (do-sap (uiop:native-namestring "~/texdraft.github.io/fortran/")))
-

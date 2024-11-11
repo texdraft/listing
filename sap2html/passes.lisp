@@ -20,11 +20,13 @@
       (loop for table in *library*
             thereis (gethash name table))))
 
+(defun every-space (string)
+  (every (lambda (c) (char= c #\Space)) string))
+
 (defun deconstruct-line (assembly line number)
   (let ((sequence (subseq line 102 110)))
-    (if (or (char= (char line 0) #\9)
-            (every (lambda (c) (char= c #\Space))
-                   (subseq line 0 41)))
+    (if (or (char= (char line 0) #\1)
+            (every-space (subseq line 0 41)))
         (make-line :assembly assembly
                    :remarksp t
                    :remarks (subseq line 41 102)
@@ -41,23 +43,49 @@
         (address (subseq line 7 12))
         (assembled (subseq line 13 29))
         (location (subseq line 30 37))
-        (operation-start 37)
+        (generatedp (every-space (subseq line 27)))
+        (i 37)
         (operation-end 37))
-    (loop for i from operation-start
-          until (member (char line i) '(#\Space #\8))
-          do (incf operation-end))
-    (let ((operation (gethash (subseq line operation-start operation-end)
-                              *operations*)))
-      (make-line :assembly assembly
-                 :flags flags
-                 :address address
-                 :assembled assembled
-                 :number number
-                 :location location
-                 :operation operation
-                 :indirectp (char= (char line operation-end) #\*)
-                 :variable (subseq line (1+ operation-end) 102)
-                 :sequence sequence))))
+    (loop while (and (< i 43)
+                     (char= (char line i) #\Space))
+          do (incf i))
+    (if (= i 37)
+        (loop until (char= (char line operation-end) #\Space)
+              while (< operation-end 43)
+              do (incf operation-end))
+        (setf operation-end (- i 1)))
+    (let* ((operation-text (if (= i 37)
+                               (subseq line i operation-end)
+                               ""))
+           (operation (gethash operation-text *operations*)))
+      (if (and (or (not operation)
+                   (and operation
+                        (not (string= operation-text "BCD"))))
+               (every-space (subseq line operation-end 47)))
+          (make-line :assembly assembly
+                     :flags flags
+                     :generatedp generatedp
+                     :assembled assembled
+                     :number number
+                     :location location
+                     :operation operation
+                     :indirectp (char= (char line operation-end) #\*)
+                     :variable " "
+                     :variable-length 0
+                     :remarks (subseq line (1+ operation-end) 102)
+                     :sequence sequence)
+          (make-line :assembly assembly
+                     :flags flags
+                     :address address
+                     :generatedp generatedp
+                     :assembled assembled
+                     :number number
+                     :location location
+                     :operation operation
+                     :indirectp (char= (char line operation-end) #\*)
+                     :variable (subseq line operation-end 102)
+                     :variable-length 0
+                     :sequence sequence)))))
 
 (defun separate-variable-fields (assembly)
   (loop for line across (assembly-lines assembly) do
@@ -70,17 +98,21 @@
                (setf (line-remarks line) (subseq (line-variable line) 7)
                      (line-variable line) (subseq (line-variable line) 0 7)))
              (setf (line-variable-length line) (* count 6))))
+          ((line-remarks line))
           (t
-           (let ((variable-end 0))
-             (cond ((line-operation line)
-                    (loop for i from 0
-                          until (char= (char (line-variable line) i) #\Space)
-                          do (incf variable-end)))
-                   (t
-                    (setf (line-variable line) (string-left-trim '(#\Space) (line-variable line)))))
-             (setf (line-remarks line) (format nil "~A" (subseq (line-variable line) variable-end))
-                   (line-variable line) (subseq (line-variable line) 0 variable-end)
-                   (line-variable-length line) variable-end))))))
+           (let ((variable (string-left-trim '(#\Space) (line-variable line)))
+                 (variable-end 0))
+             (when (> (length variable) 0)
+               (loop for i from 0 below 61
+                     until (char= (char variable i) #\Space)
+                     do (incf variable-end)))
+             (cond ((not (line-operation line))
+                    (setf (line-variable line) variable))
+                   ((not (line-remarks line))
+                    (setf (line-remarks line) (format nil "~A" (subseq variable variable-end))
+                          (line-variable line) (subseq variable 0 variable-end)
+                          (line-variable-length line) variable-end))))))))
+
 
 (defun symbol-character-p (c)
   (or (alphanumericp c)
@@ -208,7 +240,8 @@
             (if (line-address line)
                 (setf (sap-symbol-value symbol) (line-address line))
                 (let ((segment (parse-integer (subseq (line-assembled line) 11)
-                                              :radix 8)))
+                                              :radix 8
+                                              :junk-allowed t)))
                   (setf (sap-symbol-value symbol) segment)))
             (when (line-operation line)
               (let* ((mnemonic (intern (operation-mnemonic (line-operation line))

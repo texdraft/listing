@@ -211,6 +211,7 @@
 (defun output-variable (line h)
   (begin-element h :td :class "variable-remarks")
   (when (line-variable line)
+    (begin-element h :span :class "variable")
     (let ((count 0))
       (loop for token in (line-variable line) do
         (case (token-type token)
@@ -277,7 +278,8 @@
            (incf count)
            (format-html h "*"))))
       (loop repeat (- (line-variable-length line) count) do
-        (format-html h " "))))
+        (format-html h " ")))
+    (end-element h :span))
   (if (line-remarks line)
       (format-html h "~V@A" (- 60 (line-variable-length line)) (line-remarks line))
       (when (< (line-variable-length line))
