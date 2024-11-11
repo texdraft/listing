@@ -116,27 +116,33 @@
                    (69 "main diagnostic record")
                    (otherwise "diagnostic error comment"))))
 
-(defun do-fortran ()
+(defun copy-file (h file)
+  (with-open-file (i file)
+    (format-html h (with-open-file (i "intro.html")
+                     (apply #'concatenate 'string (loop for line := (read-line i nil nil)
+                                                        while line
+                                                        collect line))))))
+
+(defun do-fortran (out)
   (process-file "fort2.lst"
                 "FORTRAN II"
-                (lambda (h)
-                  (format-html h (with-open-file (i "intro.html")
-                                   (apply #'concatenate 'string (loop for line := (read-line i nil nil)
-                                                                      while line
-                                                                      collect line)))))
+                (lambda (h) (copy-file h "intro.html"))
                 #'fortran-name
-                (uiop:native-namestring "~/texdraft.github.io/fortran/")
+                out
                 "fortran"))
 
-(defun do-sap ()
+(defun do-sap (out)
   (process-file "uasap.lst"
                 "Symbolic Assembly Program (SAP)"
-                (lambda (h) "tbd")
+                (lambda (h) (copy-file h "intro.html"))
                 (lambda (n)
                   (if (= n 1)
                       "Pass 1"
                       "Pass 2"))
-                (uiop:native-namestring "~/texdraft.github.io/fortran/")
+                out
                 "sap"))
 
-(do-sap)
+(defun do-texdraft ()
+  (do-fortran (uiop:native-namestring "~/texdraft.github.io/fortran/"))
+  (do-sap (uiop:native-namestring "~/texdraft.github.io/fortran/")))
+

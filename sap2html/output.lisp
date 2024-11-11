@@ -485,13 +485,16 @@
       (let ((h (make-html :output output
                           :assembly nil)))
         (html-preamble output (assembly-title first) "landing-page" nil)
+        (begin-element h :h1)
+        (format-html h (assembly-title first))
+        (end-element h :h1)
         (funcall (assembly-introducer first) h)
         (begin-element h :table :class "assemblies")
         (begin-element h :tbody)
         (loop for assembly in assemblies as i from 1 do
           (begin-element h :tr)
           (begin-element h :td)
-          (format-html h "~A" (funcall (assembly-namer first) i))
+          (format-html h (funcall (assembly-namer first) i))
           (end-element h :td)
           (begin-element h :td)
           (begin-element h :a :href (format nil "~A.html" (assembly-base-name assembly)))
