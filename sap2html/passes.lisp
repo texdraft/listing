@@ -61,7 +61,7 @@
       (if (and (or (not operation)
                    (and operation
                         (not (string= operation-text "BCD"))))
-               (every-space (subseq line operation-end 47)))
+               (every-space (subseq line 37 42)))
           (make-line :assembly assembly
                      :flags flags
                      :generatedp generatedp
@@ -99,6 +99,12 @@
                      (line-variable line) (subseq (line-variable line) 0 7)))
              (setf (line-variable-length line) (* count 6))))
           ((line-remarks line))
+          ((and (> (length (line-variable line)) 2)
+                (char= (char (line-variable line) 0)
+                       (char (line-variable line) 1)
+                       #\Space))
+           (setf (line-remarks line) (subseq (line-variable line) 1)
+                 (line-variable line) ""))
           (t
            (let ((variable (string-left-trim '(#\Space) (line-variable line)))
                  (variable-end 0))
